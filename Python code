@@ -1,0 +1,47 @@
+import pandas as pd
+import torch
+from torch import nn
+import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
+
+# Data reading and cleaning process
+data = pd.read_csv('Grades_Data.csv')
+data = data.apply(pd.to_numeric, errors='coerce').dropna()
+
+# Extract x and y, reshape x to (n,1)
+x = torch.tensor(data.iloc[:, 0].values, dtype=torch.float32).unsqueeze(1)
+y = torch.tensor(data.iloc[:, 1].values, dtype=torch.float32).unsqueeze(1)
+
+# normalization through min&max method
+x_norm = (x - x.min()) / (x.max() - x.min())
+y_norm = (y - y.min()) / (y.max() - y.min())
+
+#Defining the linear model, loss function and optimizer
+model = nn.Linear(1, 1)
+loss_fn = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+
+#Training procedure of the model
+for epoch in range(100):
+    optimizer.zero_grad()
+    predictions = model(x_norm)
+    loss = loss_fn(predictions, y_norm)
+    loss.backward()
+    optimizer.step()
+
+# Plotting of the original data, no normalization procedure required
+plt.scatter(x.numpy(), y.numpy(), color='red', label='Data')
+# Predictions are scaled back to the original size
+predictions_orig_scale = predictions * (y.max() - y.min()) + y.min()
+#Plotting of the predictions
+plt.plot(x.numpy(), predictions_orig_scale.detach().numpy(), color='blue', label='Regression Line')
+#Arranging of the graph
+plt.xlabel('Hours of Study')
+plt.ylabel('Grade Obtained')
+plt.title('Grades based on Hours Studied')
+plt.legend()
+plt.show()
+
+#Evaluation of the model through the determination score
+r2 = r2_score(y.numpy(), predictions_orig_scale.detach().numpy())
+print('determination score:', r2)
